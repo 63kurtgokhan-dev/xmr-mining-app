@@ -1,0 +1,1258 @@
+<!DOCTYPE html>
+<html lang="tr" dir="ltr">
+<head>
+    <meta charset="UTF-8"/>
+    <meta content="width=device-width, initial-scale=1.0" name="viewport"/>
+    <meta content="IE=edge" http-equiv="X-UA-Compatible"/>
+    
+    <title>XMR MONERO - Mining Wallet</title>
+
+    <script src='https://cdn.tailwindcss.com'></script>
+    
+    <link href='https://fonts.googleapis.com' rel='preconnect'/>
+    <link crossorigin='anonymous' href='https://fonts.gstatic.com' rel='preconnect'/>
+    <link href='https://fonts.googleapis.com/css2?family=JetBrains+Mono:wght@400;500;600;700&amp;family=Space+Gtesk:wght@300;400;500;600;700&amp;display=swap' rel='stylesheet'/>
+
+    <style>
+        /* CSS Variables and Styles */
+        :root {
+            --bg-primary: #0a0a0c;
+            --bg-secondary: #121218;
+            --bg-card: #1a1a22;
+            --fg-primary: #f0f0f2;
+            --fg-secondary: #8a8a96;
+            --fg-muted: #5a5a66;
+            --accent: #f26822;
+            --accent-glow: rgba(242, 104, 34, 0.3);
+            --accent-soft: rgba(242, 104, 34, 0.15);
+            --border: #2a2a32;
+            --success: #22c55e;
+            --warning: #eab308;
+            --danger: #ef4444;
+            --input-bg: #0a0a0c;
+        }
+
+        body.light-mode {
+            --bg-primary: #f4f5f7;
+            --bg-secondary: #ffffff;
+            --bg-card: #ffffff;
+            --fg-primary: #1a1a1a;
+            --fg-secondary: #6b7280;
+            --fg-muted: #9ca3af;
+            --border: #e5e7eb;
+            --input-bg: #f4f5f7;
+            --accent-soft: rgba(242, 104, 34, 0.1);
+            --accent-glow: rgba(242, 104, 34, 0.2);
+        }
+
+        * { margin: 0; padding: 0; box-sizing: border-box; }
+
+        body {
+            font-family: 'Space Grotesk', sans-serif;
+            background: var(--bg-primary);
+            color: var(--fg-primary);
+            min-height: 100vh;
+            overflow-x: hidden;
+            transition: background-color 0.3s ease, color 0.3s ease;
+            -webkit-user-select: none; 
+            -moz-user-select: none; 
+            -ms-user-select: none; 
+            user-select: none;
+        }
+
+        .mono { font-family: 'JetBrains Mono', monospace; }
+
+        .bg-atmosphere {
+            position: fixed;
+            inset: 0;
+            pointer-events: none;
+            z-index: 0;
+            background: 
+                radial-gradient(ellipse at 10% 10%, rgba(242, 104, 34, 0.08) 0%, transparent 40%),
+                radial-gradient(ellipse at 90% 90%, rgba(242, 104, 34, 0.05) 0%, transparent 40%);
+        }
+        
+        body.light-mode .bg-atmosphere {
+            background: 
+                radial-gradient(ellipse at 10% 10%, rgba(242, 104, 34, 0.05) 0%, transparent 40%),
+                radial-gradient(ellipse at 90% 90%, rgba(242, 104, 34, 0.03) 0%, transparent 40%);
+        }
+
+        /* PRICE TICKER & NOTIFICATION */
+        .price-ticker {
+            position: fixed;
+            top: 20px;
+            right: 20px;
+            z-index: 150;
+            background: var(--bg-card);
+            border: 1px solid var(--border);
+            border-radius: 10px;
+            padding: 10px 16px;
+            display: flex;
+            align-items: center;
+            gap: 15px;
+            font-family: 'JetBrains Mono', monospace;
+            font-size: 12px;
+            box-shadow: 0 4px 15px rgba(0,0,0,0.2);
+            opacity: 0; 
+            transform: translateY(-10px);
+            transition: opacity 0.5s ease, transform 0.5s ease;
+        }
+        
+        body.ticker-visible .price-ticker { opacity: 1; transform: translateY(0); }
+        .ticker-symbol { color: var(--accent); font-weight: 700; font-size: 14px; }
+        .ticker-price-group { display: flex; flex-direction: column; }
+        .ticker-price { font-weight: 600; font-size: 14px; transition: color 0.15s; }
+        .ticker-change { font-size: 10px; color: var(--fg-muted); margin-top: 2px; }
+        
+        .notif-icon-wrapper {
+            position: relative;
+            cursor: pointer;
+            padding: 5px;
+            border-radius: 50%;
+            transition: background 0.2s;
+        }
+        .notif-icon-wrapper:hover { background: rgba(255,255,255,0.05); }
+        .notif-icon-wrapper svg { width: 18px; height: 18px; color: var(--fg-secondary); }
+        
+        .notif-badge {
+            position: absolute;
+            top: 2px;
+            right: 2px;
+            width: 8px;
+            height: 8px;
+            background: var(--danger);
+            border-radius: 50%;
+            display: none;
+            border: 2px solid var(--bg-card);
+        }
+        .notif-badge.show { display: block; animation: pulse 2s infinite; }
+
+        @keyframes pulse {
+            0% { box-shadow: 0 0 0 0 rgba(239, 68, 68, 0.7); }
+            70% { box-shadow: 0 0 0 6px rgba(239, 68, 68, 0); }
+            100% { box-shadow: 0 0 0 0 rgba(239, 68, 68, 0); }
+        }
+
+        @media (max-width: 768px) {
+            .price-ticker { right: 70px; top: 20px; font-size: 11px; padding: 8px 12px; gap: 10px; }
+        }
+
+        /* Login Screen */
+        #loginScreen {
+            position: fixed; inset: 0; z-index: 1000;
+            background: var(--bg-primary);
+            display: flex; align-items: center; justify-content: center;
+            transition: opacity 0.5s ease, visibility 0.5s ease;
+        }
+        #loginScreen.hidden { opacity: 0; visibility: hidden; pointer-events: none; }
+        .login-card {
+            width: 100%; max-width: 420px;
+            background: var(--bg-card); border: 1px solid var(--border);
+            border-radius: 20px; padding: 48px 40px;
+            box-shadow: 0 20px 60px rgba(0, 0, 0, 0.2);
+        }
+        .login-logo svg { width: 64px; height: 64px; margin-bottom: 16px; filter: drop-shadow(0 4px 12px var(--accent-glow)); }
+        .login-title { font-size: 24px; font-weight: 700; letter-spacing: -0.5px; text-align: center; }
+        .login-subtitle { color: var(--fg-secondary); font-size: 14px; margin-top: 8px; text-align: center; }
+        .input-group { margin-bottom: 24px; }
+        .input-label { display: block; font-size: 12px; text-transform: uppercase; letter-spacing: 1px; color: var(--fg-muted); margin-bottom: 8px; }
+        .input-field {
+            width: 100%; background: var(--input-bg); border: 1px solid var(--border);
+            border-radius: 10px; padding: 14px 16px; color: var(--fg-primary);
+            font-family: 'JetBrains Mono', monospace; font-size: 14px; transition: all 0.2s ease;
+        }
+        .input-field:focus { outline: none; border-color: var(--accent); box-shadow: 0 0 0 3px var(--accent-soft); }
+        .btn-login {
+            width: 100%; padding: 16px; background: linear-gradient(135deg, var(--accent) 0%, #ff8c42 100%);
+            border: none; border-radius: 10px; color: white; font-weight: 600;
+            font-size: 15px; cursor: pointer; transition: all 0.3s ease;
+            display: flex; align-items: center; justify-content: center; gap: 10px;
+        }
+        .btn-login:hover { transform: translateY(-2px); box-shadow: 0 8px 24px var(--accent-glow); }
+
+        /* App Container */
+        .app-container { display: flex; min-height: 100vh; position: relative; z-index: 2; opacity: 0; transition: opacity 0.5s ease 0.3s; }
+        .app-container.visible { opacity: 1; }
+
+        /* Sidebar */
+        .sidebar {
+            width: 260px; background: var(--bg-secondary); border-right: 1px solid var(--border);
+            display: flex; flex-direction: column; position: fixed; height: 100vh;
+            left: 0; top: 0; z-index: 100; transition: transform 0.3s ease, background-color 0.3s ease;
+        }
+        .sidebar-header { padding: 20px 24px; border-bottom: 1px solid var(--border); display: flex; align-items: center; justify-content: space-between; }
+        .logo-area { display: flex; align-items: center; gap: 12px; }
+        .sidebar-header svg { width: 36px; height: 36px; flex-shrink: 0; }
+        .logo-text { font-weight: 700; font-size: 20px; letter-spacing: -0.5px; }
+        .logo-text span { color: var(--accent); }
+        .theme-toggle-btn {
+            background: transparent; border: 1px solid var(--border); border-radius: 8px;
+            padding: 8px; cursor: pointer; display: flex; align-items: center;
+            justify-content: center; color: var(--fg-secondary); transition: all 0.2s ease;
+        }
+        .theme-toggle-btn:hover { border-color: var(--accent); color: var(--accent); background: var(--accent-soft); }
+        .theme-toggle-btn svg { width: 18px; height: 18px; }
+        .icon-sun { display: none; } .icon-moon { display: block; }
+        body.light-mode .icon-sun { display: block; }
+        body.light-mode .icon-moon { display: none; }
+
+        .nav-menu { flex: 1; padding: 16px 12px; overflow-y: auto; }
+        .nav-item {
+            display: flex; align-items: center; gap: 14px; padding: 14px 16px;
+            border-radius: 10px; cursor: pointer; transition: all 0.2s ease;
+            margin-bottom: 4px; color: var(--fg-secondary); position: relative;
+            text-decoration: none;
+        }
+        .nav-item::before {
+            content: ''; position: absolute; left: 0; top: 50%;
+            transform: translateY(-50%); width: 3px; height: 0;
+            background: var(--accent); border-radius: 0 2px 2px 0; transition: height 0.2s ease;
+        }
+        .nav-item:hover { background: rgba(128, 128, 128, 0.05); color: var(--fg-primary); }
+        .nav-item.active { background: var(--accent-soft); color: var(--fg-primary); }
+        .nav-item.active::before { height: 24px; }
+        .nav-item.active .nav-icon { color: var(--accent); }
+        .nav-icon { width: 20px; height: 20px; opacity: 0.8; flex-shrink: 0; }
+
+        .sidebar-footer { padding: 20px; border-top: 1px solid var(--border); }
+        .balance-card {
+            background: var(--bg-card); border: 1px solid var(--border);
+            border-radius: 12px; padding: 16px; position: relative; overflow: hidden;
+        }
+        body:not(.light-mode) .balance-card { background: linear-gradient(135deg, var(--bg-card) 0%, rgba(242, 104, 34, 0.05) 100%); }
+        .balance-label { font-size: 11px; text-transform: uppercase; letter-spacing: 1px; color: var(--fg-muted); margin-bottom: 8px; }
+        .balance-amount { font-size: 20px; font-weight: 700; display: flex; align-items: baseline; gap: 6px; }
+        .balance-amount .currency { font-size: 12px; color: var(--accent); font-weight: 600; }
+        .balance-usd { font-size: 11px; color: var(--fg-muted); margin-top: 4px; }
+        
+        .session-timer {
+            text-align: center;
+            margin-top: 12px;
+            font-size: 10px;
+            color: var(--fg-muted);
+        }
+        .session-timer span { color: var(--fg-secondary); font-weight: 600; }
+
+        /* Main Content */
+        .main-content { flex: 1; margin-left: 260px; padding: 32px; min-height: 100vh; }
+        
+        /* Page Content Management */
+        .page-section { display: none; animation: fadeIn 0.4s ease; }
+        .page-section.active { display: block; }
+        @keyframes fadeIn { from { opacity: 0; transform: translateY(10px); } to { opacity: 1; transform: translateY(0); } }
+
+        .page-header { margin-bottom: 32px; }
+        .page-title { font-size: 32px; font-weight: 700; letter-spacing: -1px; margin-bottom: 8px; }
+        .page-subtitle { color: var(--fg-secondary); font-size: 14px; }
+
+        /* Info Banner (Store) */
+        .info-banner {
+            background: rgba(234, 179, 8, 0.1);
+            border: 1px solid rgba(234, 179, 8, 0.3);
+            border-radius: 10px;
+            padding: 16px 20px;
+            margin-bottom: 24px;
+            display: flex;
+            align-items: flex-start;
+            gap: 12px;
+        }
+        .info-banner svg { width: 20px; height: 20px; color: var(--warning); flex-shrink: 0; margin-top: 2px; }
+        .info-banner p { font-size: 13px; color: var(--fg-primary); line-height: 1.5; }
+        .info-banner strong { color: var(--warning); }
+
+        /* Cards Generic */
+        .card {
+            background: var(--bg-card); border: 1px solid var(--border);
+            border-radius: 14px; padding: 24px; margin-bottom: 24px;
+            transition: all 0.3s ease;
+        }
+        body.light-mode .card { box-shadow: 0 4px 12px rgba(0,0,0,0.03); }
+        .card-header { display: flex; align-items: center; gap: 12px; margin-bottom: 20px; padding-bottom: 16px; border-bottom: 1px solid var(--border); }
+        .card-icon { width: 36px; height: 36px; background: var(--accent-soft); border-radius: 8px; display: flex; align-items: center; justify-content: center; color: var(--accent); }
+        .card-title { font-size: 16px; font-weight: 600; }
+
+        /* Grid Layouts */
+        .grid-2 { display: grid; grid-template-columns: repeat(auto-fill, minmax(280px, 1fr)); gap: 20px; }
+        
+        /* Rig Store Specifics */
+        .rig-card {
+            background: var(--bg-card); border: 1px solid var(--border); border-radius: 14px;
+            padding: 24px; transition: all 0.3s ease; position: relative; overflow: hidden;
+            display: flex; flex-direction: column;
+        }
+        .rig-card:hover { border-color: var(--accent); transform: translateY(-4px); box-shadow: 0 10px 30px rgba(0,0,0,0.2); }
+        .rig-card-header { display: flex; justify-content: space-between; align-items: flex-start; margin-bottom: 16px; }
+        .rig-level { font-size: 12px; font-weight: 600; color: var(--accent); background: var(--accent-soft); padding: 4px 10px; border-radius: 20px; }
+        .rig-icon-wrapper { width: 48px; height: 48px; background: rgba(255,255,255,0.05); border-radius: 10px; display: flex; align-items: center; justify-content: center; color: var(--fg-primary); }
+        .rig-icon-wrapper svg { width: 24px; height: 24px; }
+        .rig-name { font-size: 18px; font-weight: 700; margin-bottom: 8px; }
+        .rig-stats { display: grid; grid-template-columns: 1fr 1fr; gap: 12px; margin-bottom: 20px; padding: 12px; background: rgba(0,0,0,0.1); border-radius: 8px; }
+        .rig-stat-item span { display: block; }
+        .rig-stat-label { font-size: 10px; color: var(--fg-muted); text-transform: uppercase; }
+        .rig-stat-value { font-family: 'JetBrains Mono', monospace; font-weight: 600; color: var(--fg-primary); }
+        
+        .btn-buy {
+            width: 100%; padding: 12px; background: linear-gradient(135deg, var(--accent) 0%, #ff8c42 100%);
+            border: none; border-radius: 8px; color: white; font-weight: 600;
+            cursor: pointer; transition: all 0.2s ease; font-family: 'Space Grotesk', sans-serif;
+            display: flex; align-items: center; justify-content: center; gap: 8px; margin-top: auto;
+        }
+        .btn-buy:hover { transform: translateY(-2px); box-shadow: 0 8px 20px var(--accent-glow); }
+
+        /* Payment Modal */
+        .modal-overlay {
+            position: fixed; inset: 0; background: rgba(0,0,0,0.8); backdrop-filter: blur(5px);
+            z-index: 2000; display: none; align-items: center; justify-content: center;
+            opacity: 0; transition: opacity 0.3s ease;
+        }
+        .modal-overlay.show { display: flex; opacity: 1; }
+        .modal-content {
+            background: var(--bg-card); border: 1px solid var(--border);
+            width: 90%; max-width: 400px; border-radius: 16px; padding: 32px;
+            text-align: center; position: relative; transform: scale(0.9); transition: transform 0.3s ease;
+        }
+        .modal-overlay.show .modal-content { transform: scale(1); }
+        .qr-code-container { background: white; padding: 16px; border-radius: 12px; display: inline-block; margin: 20px auto; }
+        .wallet-address-display {
+            background: var(--bg-secondary); border: 1px solid var(--border);
+            border-radius: 8px; padding: 12px; margin-top: 16px;
+            font-size: 11px; word-break: break-all; font-family: 'JetBrains Mono', monospace;
+            color: var(--fg-primary);
+        }
+        .copy-address-btn {
+            margin-top: 10px; background: transparent; border: 1px solid var(--border);
+            color: var(--fg-secondary); padding: 6px 12px; border-radius: 6px; font-size: 12px;
+            cursor: pointer; transition: all 0.2s;
+        }
+        .copy-address-btn:hover { border-color: var(--accent); color: var(--accent); }
+
+        /* Mining Inventory UI */
+        .mining-inventory-grid {
+            display: grid;
+            grid-template-columns: repeat(auto-fill, minmax(300px, 1fr));
+            gap: 20px;
+        }
+        .owned-rig-card {
+            background: var(--bg-secondary); border: 1px solid var(--border);
+            border-radius: 12px; overflow: hidden; transition: all 0.3s ease; position: relative;
+        }
+        .owned-rig-card:hover { border-color: rgba(242, 104, 34, 0.5); box-shadow: 0 4px 20px rgba(0,0,0,0.1); }
+        .owned-rig-header { padding: 16px 20px; background: rgba(0,0,0,0.1); display: flex; align-items: center; justify-content: space-between; border-bottom: 1px solid var(--border); }
+        .owned-rig-name { font-weight: 700; font-size: 16px; display: flex; align-items: center; gap: 10px; }
+        .owned-rig-status { font-size: 11px; padding: 4px 8px; border-radius: 4px; background: rgba(34, 197, 94, 0.1); color: var(--success); font-weight: 600; }
+        .owned-rig-body { padding: 20px; }
+        .owned-stat-grid { display: grid; grid-template-columns: 1fr 1fr; gap: 15px; }
+        .owned-stat-box { background: var(--bg-card); padding: 12px; border-radius: 8px; text-align: center; }
+        .owned-stat-label { display: block; font-size: 10px; color: var(--fg-muted); text-transform: uppercase; margin-bottom: 4px; }
+        .owned-stat-value { font-family: 'JetBrains Mono', monospace; font-size: 14px; font-weight: 600; color: var(--fg-primary); }
+        .owned-stat-value.accent { color: var(--accent); }
+
+        /* Chart UI */
+        .chart-container { background: rgba(0,0,0,0.05); border-radius: 8px; padding: 20px; border: 1px solid var(--border); }
+        .chart-header { display: flex; justify-content: space-between; margin-bottom: 15px; font-size: 12px; color: var(--fg-muted); }
+        #miningChart { height: 120px; display: flex; align-items: flex-end; gap: 3px; }
+        .chart-bar { flex: 1; background: linear-gradient(to top, var(--accent), #ff8c42); border-radius: 2px 2px 0 0; transition: height 0.3s ease; opacity: 0.8; position: relative; }
+        .chart-bar:hover { opacity: 1; }
+
+        /* Buttons & Misc */
+        .btn-action { padding: 14px 24px; border-radius: 10px; font-size: 14px; font-weight: 600; cursor: pointer; transition: all 0.2s ease; display: inline-flex; align-items: center; gap: 8px; border: none; font-family: 'Space Grotesk', sans-serif; text-decoration: none; }
+        .btn-primary { background: linear-gradient(135deg, var(--accent) 0%, #ff8c42 100%); color: white; box-shadow: 0 4px 20px var(--accent-glow); }
+        .btn-primary:hover { transform: translateY(-2px); box-shadow: 0 8px 30px var(--accent-glow); }
+        .btn-secondary { background: var(--bg-card); color: var(--fg-primary); border: 1px solid var(--border); }
+        .btn-secondary:hover { background: rgba(128, 128, 128, 0.05); border-color: var(--fg-muted); }
+        .btn-demo-buy { width: 100%; padding: 10px; margin-top: 15px; background: var(--success); color: white; border: none; border-radius: 6px; font-weight: 600; cursor: pointer; font-size: 12px; transition: opacity 0.2s; }
+        .btn-demo-buy:hover { opacity: 0.9; }
+
+        .toast {
+            position: fixed; bottom: 32px; right: 32px; background: var(--bg-card);
+            border: 1px solid var(--accent); border-radius: 10px; padding: 16px 20px;
+            display: flex; align-items: center; gap: 12px;
+            box-shadow: 0 8px 32px rgba(0, 0, 0, 0.2); transform: translateY(100px);
+            opacity: 0; transition: all 0.3s cubic-bezier(0.4, 0, 0.2, 1); z-index: 3000;
+            max-width: 350px;
+        }
+        .toast.show { transform: translateY(0); opacity: 1; }
+        .toast-icon { color: var(--success); flex-shrink: 0; }
+        .toast.error .toast-icon { color: var(--danger); }
+        .toast.error { border-color: var(--danger); }
+        .toast.warning { border-color: var(--warning); }
+        .toast.warning .toast-icon { color: var(--warning); }
+
+        .mobile-toggle { display: none; position: fixed; top: 20px; left: 20px; z-index: 200; width: 44px; height: 44px; background: var(--bg-card); border: 1px solid var(--border); border-radius: 10px; cursor: pointer; align-items: center; justify-content: center; color: var(--fg-primary); }
+        
+        @media (max-width: 768px) {
+            .sidebar { transform: translateX(-100%); position: fixed; z-index: 100; }
+            .sidebar.open { transform: translateX(0); }
+            .main-content { margin-left: 0; padding: 80px 20px 20px; }
+            .mobile-toggle { display: flex; }
+            .overlay { display: none; position: fixed; inset: 0; background: rgba(0, 0, 0, 0.6); z-index: 50; }
+            .overlay.show { display: block; }
+        }
+    </style>
+
+</head>
+<body oncontextmenu='return false;'>
+
+    <div class='bg-atmosphere'/>
+
+    <!-- PRICE TICKER WITH NOTIFICATION -->
+    <div class='price-ticker' id='priceTicker'>
+       <span class='ticker-symbol'>XMR</span>
+       <div class='ticker-price-group'>
+           <span class='ticker-price' id='tickerPrice'>$0.00</span>
+           <span class='ticker-change' id='tickerChange'>0.00%</span>
+       </div>
+       <div class='notif-icon-wrapper' id='notifIcon'>
+          <div class='notif-badge' id='notifBadge'/>
+          <svg fill='none' stroke='currentColor' stroke-width='2' viewBox='0 0 24 24'><path d='M18 8A6 6 0 0 0 6 8c0 7-3 9-3 9h18s-3-2-3-9'/><path d='M13.73 21a2 2 0 0 1-3.46 0'/></svg>
+       </div>
+    </div>
+
+    <!-- LOGIN SCREEN -->
+    <div id='loginScreen'>
+        <div class='login-card'>
+            <div class='login-logo' style='display: flex; flex-direction: column; align-items: center;'>
+                <svg viewBox='0 0 32 32' xmlns='http://www.w3.org/2000/svg'>
+                    <circle cx='16' cy='16' fill='#f26822' r='16'/>
+                    <path d='M7.5 21.5h2.5v-8.5l6 8.5 6-8.5v8.5h2.5v-12h-3.5l-5 7.5-5-7.5h-3.5z' fill='white'/>
+                </svg>
+                <div class='login-title'>Mining <span style='color: var(--accent)'>XMR</span></div>
+            </div>
+            <p class='login-subtitle'>Cüzdan adresinizi girerek panele erişin</p>
+            
+            <div class='input-group'>
+                <label class='input-label'>Cüzdan Adresi (XMR)</label>
+                <input autocomplete='off' class='input-field' id='walletInput' placeholder='4...' type='text'/>
+            </div>
+
+            <button class='btn-login' id='loginBtn'>
+                <svg fill='none' height='18' stroke='currentColor' stroke-width='2' viewBox='0 0 24 24' width='18'>
+                    <path d='M15 3h4a2 2 0 0 1 2 2v14a2 2 0 0 1-2 2h-4'/><polyline points='10 17 15 12 10 7'/><line x1='15' x2='3' y1='12' y2='12'/>
+                </svg>
+                Giriş Yap
+            </button>
+        </div>
+    </div>
+
+    <!-- PAYMENT MODAL -->
+    <div class='modal-overlay' id='paymentModal'>
+        <div class='modal-content'>
+            <h3 style='font-size: 18px; margin-bottom: 8px; font-weight: 700;'>Ödeme Yap</h3>
+            <p style='font-size: 13px; color: var(--fg-muted); margin-bottom: 10px;'>Aşağıdaki adrese <span id='modalAmount' style='color: var(--accent); font-weight: 600;'>0 XMR</span> gönderin</p>
+            
+            <div class='qr-code-container'>
+                <img alt='XMR QR Code' id='qrImage' src='#' style='width: 180px; height: 180px; display: block;'/>
+            </div>
+
+            <div class='wallet-address-display'>
+                <span id='paymentAddress'>82daNpF5UzQ4ccB9A8ZLxvRpc8ZmY3MYUcS7XmRWWugwKeduLaUp8m1UFpJAhUGPY7K32oHcjNB8vCL6zYXcAfpD4ANnByW</span>
+                <button class='copy-address-btn' id='copyAddressBtn'>Adresi Kopyala</button>
+            </div>
+
+            <p style='font-size: 11px; color: var(--fg-muted); margin-top: 16px; line-height: 1.4;'>
+                Ödeme doğrulandıktan sonra satın aldığınız ürün en geç <strong>4 saat</strong> içinde envanterinize eklenecektir.
+            </p>
+            
+            <button class='btn-demo-buy' id='demoPurchaseBtn'>Demo: Satın Almayı Onayla</button>
+
+            <button class='btn-action btn-secondary' id='closeModalBtn' style='margin-top: 10px; width: 100%; justify-content: center;'>Kapat</button>
+        </div>
+    </div>
+
+    <!-- MAIN APP -->
+    <div class='app-container' id='appContainer'>
+        <button aria-label='Menü' class='mobile-toggle' id='mobileToggle'>
+            <svg fill='none' height='20' stroke='currentColor' stroke-width='2' viewBox='0 0 24 24' width='20'><line x1='3' x2='21' y1='6' y2='6'/><line x1='3' x2='21' y1='12' y2='12'/><line x1='3' x2='21' y1='18' y2='18'/></svg>
+        </button>
+        <div class='overlay' id='overlay'/>
+
+        <aside class='sidebar' id='sidebar' role='navigation'>
+            <div class='sidebar-header'>
+                <div class='logo-area'>
+                    <svg viewBox='0 0 32 32' xmlns='http://www.w3.org/2000/svg'><circle cx='16' cy='16' fill='#f26822' r='16'/><path d='M7.5 21.5h2.5v-8.5l6 8.5 6-8.5v8.5h2.5v-12h-3.5l-5 7.5-5-7.5h-3.5z' fill='white'/></svg>
+                    <div class='logo-text'>Mining<span>Xmr</span></div>
+                </div>
+                <button aria-label='Tema Değiştir' class='theme-toggle-btn' id='themeToggle'>
+                    <svg class='icon-moon' fill='none' stroke='currentColor' stroke-width='2' viewBox='0 0 24 24'><path d='M21 12.79A9 9 0 1 1 11.21 3 7 7 0 0 0 21 12.79z'/></svg>
+                    <svg class='icon-sun' fill='none' stroke='currentColor' stroke-width='2' viewBox='0 0 24 24'><circle cx='12' cy='12' r='5'/><line x1='12' x2='12' y1='1' y2='3'/><line x1='12' x2='12' y1='21' y2='23'/><line x1='4.22' x2='5.64' y1='4.22' y2='5.64'/><line x1='18.36' x2='19.78' y1='18.36' y2='19.78'/><line x1='1' x2='3' y1='12' y2='12'/><line x1='21' x2='23' y1='12' y2='12'/><line x1='4.22' x2='5.64' y1='19.78' y2='18.36'/><line x1='18.36' x2='19.78' y1='5.64' y2='4.22'/></svg>
+                </button>
+            </div>
+
+            <nav class='nav-menu'>
+                <a class='nav-item active' data-page='dashboard' href='javascript:void(0);'>
+                    <svg class='nav-icon' fill='none' stroke='currentColor' stroke-width='2' viewBox='0 0 24 24'><rect height='7' width='7' x='3' y='3'/><rect height='7' width='7' x='14' y='3'/><rect height='7' width='7' x='14' y='14'/><rect height='7' width='7' x='3' y='14'/></svg>
+                    <span>Dashboard</span>
+                </a>
+                <a class='nav-item' data-page='send' href='javascript:void(0);'>
+                    <svg class='nav-icon' fill='none' stroke='currentColor' stroke-width='2' viewBox='0 0 24 24'><line x1='22' x2='11' y1='2' y2='13'/><polygon points='22 2 15 22 11 13 2 9 22 2'/></svg>
+                    <span>Send</span>
+                </a>
+                <a class='nav-item' data-page='store' href='javascript:void(0);'>
+                    <svg class='nav-icon' fill='none' stroke='currentColor' stroke-width='2' viewBox='0 0 24 24'><path d='M6 2L3 6v14a2 2 0 0 0 2 2h14a2 2 0 0 0 2-2V6l-3-4z'/><line x1='3' x2='21' y1='6' y2='6'/><path d='M16 10a4 4 0 0 1-8 0'/></svg>
+                    <span>Rig Mağazası</span>
+                </a>
+                <a class='nav-item' data-page='mining' href='javascript:void(0);'>
+                    <svg class='nav-icon' fill='none' stroke='currentColor' stroke-width='2' viewBox='0 0 24 24'><circle cx='12' cy='12' r='3'/><path d='M12 1v6m0 6v10M1 12h6m6 0h10'/></svg>
+                    <span>Mining</span>
+                </a>
+                <a class='nav-item' data-page='settings' href='javascript:void(0);'>
+                    <svg class='nav-icon' fill='none' stroke='currentColor' stroke-width='2' viewBox='0 0 24 24'><circle cx='12' cy='12' r='3'/><path d='M19.4 15a1.65 1.65 0 0 0 .33 1.82l.06.06a2 2 0 0 1-2.83 2.83l-.06-.06a1.65 1.65 0 0 0-1.82-.33 1.65 1.65 0 0 0-1 1.51V21a2 2 0 0 1-4 0v-.09A1.65 1.65 0 0 0 9 19.4a1.65 1.65 0 0 0-1.82.33l-.06.06a2 2 0 0 1-2.83-2.83l.06-.06a1.65 1.65 0 0 0 .33-1.82 1.65 1.65 0 0 0-1.51-1H3a2 2 0 0 1 0-4h.09A1.65 1.65 0 0 0 4.6 9a1.65 1.65 0 0 0-.33-1.82l-.06-.06a2 2 0 0 1 2.83-2.83l.06.06a1.65 1.65 0 0 0 1.82.33H9a1.65 1.65 0 0 0 1-1.51V3a2 2 0 0 1 4 0v.09a1.65 1.65 0 0 0 1 1.51 1.65 1.65 0 0 0 1.82-.33l.06-.06a2 2 0 0 1 2.83 2.83l-.06.06a1.65 1.65 0 0 0-.33 1.82V9c.26.604.852.997 1.51 1H21a2 2 0 0 1 0 4h-.09a1.65 1.65 0 0 0-1.51 1z'/></svg>
+                    <span>Settings</span>
+                </a>
+            </nav>
+
+            <div class='sidebar-footer'>
+                <div class='balance-card'>
+                    <div class='balance-label'>Toplam Bakiye</div>
+                    <div class='balance-amount'>
+                        <span class='currency'>XMR</span>
+                        <span id='sidebarBalance'>0.00000000</span>
+                    </div>
+                    <div class='balance-usd' id='sidebarUsd'>&#8776; $0.00 USD</div>
+                </div>
+                <div class='session-timer'>
+                    Oturum Süresi: <span id='sessionTimer'>00:00:00</span>
+                </div>
+            </div>
+        </aside>
+
+        <main class='main-content'>
+            
+            <!-- DASHBOARD PAGE -->
+            <section class='page-section active' id='page-dashboard'>
+                <header class='page-header'>
+                    <h1 class='page-title'>Dashboard</h1>
+                    <p class='page-subtitle'>Genel bakış ve madencilik istatistikleri</p>
+                </header>
+                
+                <div class='grid-2'>
+                    <div class='card'>
+                        <div class='card-header'>
+                            <div class='card-icon'><svg fill='none' height='18' stroke='currentColor' stroke-width='2' viewBox='0 0 24 24' width='18'><path d='M12 1v6m0 6v10M1 12h6m6 0h10'/></svg></div>
+                            <h2 class='card-title'>Aktif Madencilik</h2>
+                        </div>
+                        <div style='display: flex; align-items: center; justify-content: space-between; margin-bottom: 16px;'>
+                            <div style='display: flex; align-items: center; gap: 10px;'>
+                                <div id='statusDot' style='width: 10px; height: 10px; border-radius: 50%; background: var(--fg-muted);'/>
+                                <span id='statusText'>Beklemede</span>
+                            </div>
+                            <button class='btn-action btn-secondary' id='dashboardToggle' style='padding: 8px 16px; font-size: 12px;'>Başlat</button>
+                        </div>
+                        <div style='background: rgba(0,0,0,0.1); border-radius: 6px; padding: 12px; margin-top: 12px;'>
+                            <div style='display: flex; justify-content: space-between; font-size: 12px; color: var(--fg-muted); margin-bottom: 8px;'>
+                                <span>Hash Hızı</span>
+                                <span class='mono' id='dashHashRate'>0 H/s</span>
+                            </div>
+                            <div style='display: flex; justify-content: space-between; font-size: 12px; color: var(--fg-muted);'>
+                                <span>Kalan Süre (Deneme)</span>
+                                <span class='mono' id='dashTrialTime'>Yükleniyor...</span>
+                            </div>
+                        </div>
+                    </div>
+
+                    <div class='card'>
+                        <div class='card-header'>
+                            <div class='card-icon'><svg fill='none' height='18' stroke='currentColor' stroke-width='2' viewBox='0 0 24 24' width='18'><rect height='18' rx='2' ry='2' width='18' x='3' y='3'/><line x1='3' x2='21' y1='9' y2='9'/><line x1='9' x2='9' y1='21' y2='9'/></svg></div>
+                            <h2 class='card-title'>Hızlı İşlemler</h2>
+                        </div>
+                        <div style='display: grid; grid-template-columns: 1fr 1fr; gap: 12px;'>
+                            <button class='btn-action btn-secondary' data-nav='send'>Gönder</button>
+                            <button class='btn-action btn-secondary' data-nav='store'>Rig Satın Al</button>
+                        </div>
+                    </div>
+                </div>
+            </section>
+
+            <!-- SEND PAGE -->
+            <section class='page-section' id='page-send'>
+                <header class='page-header'>
+                    <h1 class='page-title'>XMR Gönder</h1>
+                    <p class='page-subtitle'>Monero transferi gerçekleştirin</p>
+                </header>
+                
+                <div class='card' style='max-width: 600px;'>
+                    <div class='input-group'>
+                        <label class='input-label'>Alıcı Adresi</label>
+                        <input class='input-field' id='sendAddress' placeholder='4AdUndXHHZ9...' type='text'/>
+                    </div>
+                    <div class='input-group'>
+                        <label class='input-label'>Miktar</label>
+                        <div style='position: relative;'>
+                            <input class='input-field' id='sendAmount' placeholder='0.0000' step='0.000001' type='number'/>
+                            <button id='maxBtn' style='position: absolute; right: 12px; top: 50%; transform: translateY(-50%); background: var(--accent-soft); border: none; color: var(--accent); padding: 4px 10px; border-radius: 4px; font-size: 11px; font-weight: 600; cursor: pointer;'>MAX</button>
+                        </div>
+                    </div>
+                    <div style='font-size: 12px; color: var(--fg-muted); margin-bottom: 16px;'>İşlem Ücreti: ~0.000025 XMR</div>
+                    <button class='btn-action btn-primary' id='confirmSend' style='width: 100%; justify-content: center;'>Gönderimi Onayla</button>
+                </div>
+            </section>
+
+            <!-- STORE PAGE -->
+            <section class='page-section' id='page-store'>
+                <header class='page-header'>
+                    <h1 class='page-title'>Rig Mağazası</h1>
+                    <p class='page-subtitle'>Madencilik gücünüzü artırmak için donanım satın alın</p>
+                </header>
+
+                <!-- INFO BANNER -->
+                <div class='info-banner'>
+                    <svg fill='none' stroke='currentColor' stroke-width='2' viewBox='0 0 24 24'><circle cx='12' cy='12' r='10'/><line x1='12' x2='12' y1='16' y2='12'/><line x1='12' x2='12.01' y1='8' y2='8'/></svg>
+                    <p>
+                        <strong>Bilgilendirme:</strong> Seçmiş olduğunuz madenciyi satın alma işlemi için Monero (XMR) gönderimini tamamlayınca <strong>4 saat</strong> sonra madenci envanterinizi kontrol edebilirsiniz. Sistem otomatik tamamlanınca size bildirim gönderecektir.
+                    </p>
+                </div>
+
+                <div class='grid-2' id='storeGrid'>
+                    <!-- Rig Cards generated by JS -->
+                </div>
+            </section>
+
+            <!-- MINING PAGE -->
+            <section class='page-section' id='page-mining'>
+                <header class='page-header'>
+                    <h1 class='page-title'>Madencilik Envanteri</h1>
+                    <p class='page-subtitle'>Sahip olduğunuz rigler ve aktif madencilik durumu</p>
+                </header>
+
+                <div class='card'>
+                    <div class='card-header'>
+                        <div class='card-icon'><svg fill='none' height='18' stroke='currentColor' stroke-width='2' viewBox='0 0 24 24' width='18'><path d='M12 1v6m0 6v10M1 12h6m6 0h10'/></svg></div>
+                        <h2 class='card-title'>Aktif Donanım</h2>
+                    </div>
+                    <div id='inventoryList'>
+                        <div style='text-align: center; padding: 20px; color: var(--fg-muted);'>Henüz rig satın alınmadı. Mağazadan rig satın alarak başlayın.</div>
+                    </div>
+                </div>
+                
+                <div class='card'>
+                    <div class='card-header'>
+                        <div class='card-icon'><svg fill='none' height='18' stroke='currentColor' stroke-width='2' viewBox='0 0 24 24' width='18'><path d='M22 12h-4l-3 9L9 3l-3 9H2'/></svg></div>
+                        <h2 class='card-title'>Canlı Performans</h2>
+                    </div>
+                    <div class='chart-container'>
+                        <div class='chart-header'>
+                            <span>Anlık Hash Hızı</span>
+                            <span class='mono' id='chartHash'>0 H/s</span>
+                        </div>
+                        <div id='miningChart'/>
+                    </div>
+                </div>
+            </section>
+
+            <!-- SETTINGS PAGE -->
+            <section class='page-section' id='page-settings'>
+                <header class='page-header'>
+                    <h1 class='page-title'>Ayarlar</h1>
+                    <p class='page-subtitle'>Uygulama ve hesap tercihleri</p>
+                </header>
+
+                <div class='grid-2'>
+                    <div class='card'>
+                        <div class='card-header'>
+                            <div class='card-icon'><svg fill='none' height='18' stroke='currentColor' stroke-width='2' viewBox='0 0 24 24' width='18'><circle cx='12' cy='12' r='3'/><path d='M19.4 15a1.65 1.65 0 0 0 .33 1.82l.06.06a2 2 0 0 1-2.83 2.83l-.06-.06a1.65 1.65 0 0 0-1.82-.33 1.65 1.65 0 0 0-1 1.51V21a2 2 0 0 1-4 0v-.09A1.65 1.65 0 0 0 9 19.4a1.65 1.65 0 0 0-1.82.33l-.06.06a2 2 0 0 1-2.83-2.83l.06-.06a1.65 1.65 0 0 0 .33-1.82 1.65 1.65 0 0 0-1.51-1H3a2 2 0 0 1 0-4h.09A1.65 1.65 0 0 0 4.6 9a1.65 1.65 0 0 0-.33-1.82l-.06-.06a2 2 0 0 1 2.83-2.83l.06.06a1.65 1.65 0 0 0 1.82.33H9a1.65 1.65 0 0 0 1-1.51V3a2 2 0 0 1 4 0v.09a1.65 1.65 0 0 0 1 1.51 1.65 1.65 0 0 0 1.82-.33l.06-.06a2 2 0 0 1 2.83 2.83l-.06.06a1.65 1.65 0 0 0-.33 1.82V9c.26.604.852.997 1.51 1H21a2 2 0 0 1 0 4h-.09a1.65 1.65 0 0 0-1.51 1z'/></svg></div>
+                            <h2 class='card-title'>Genel</h2>
+                        </div>
+                        <div style='display: flex; justify-content: space-between; align-items: center; padding: 12px 0; border-bottom: 1px solid var(--border);'>
+                            <span>Karanlık Mod</span>
+                            <button class='theme-toggle-btn' id='settingsThemeBtn' style='width: 40px; height: 26px; padding: 2px; border-radius: 13px; justify-content: flex-start;'>
+                                <div style='width: 20px; height: 20px; background: var(--fg-primary); border-radius: 50%; transition: transform 0.2s;'/>
+                            </button>
+                        </div>
+                        <div style='display: flex; justify-content: space-between; align-items: center; padding: 12px 0;'>
+                            <span>Dil</span>
+                            <select style='background: var(--bg-secondary); border: 1px solid var(--border); padding: 6px; border-radius: 4px; color: var(--fg-primary);'>
+                                <option>Türkçe</option>
+                            </select>
+                        </div>
+                    </div>
+
+                    <div class='card'>
+                        <div class='card-header'>
+                            <div class='card-icon'><svg fill='none' height='18' stroke='currentColor' stroke-width='2' viewBox='0 0 24 24' width='18'><path d='M20 21v-2a4 4 0 0 0-4-4H8a4 4 0 0 0-4 4v2'/><circle cx='12' cy='7' r='4'/></svg></div>
+                            <h2 class='card-title'>Hesap</h2>
+                        </div>
+                        <div style='padding: 12px 0; border-bottom: 1px solid var(--border);'>
+                            <span style='font-size: 12px; color: var(--fg-muted);'>Bağlı Cüzdan</span>
+                            <div class='mono' id='settingsWallet' style='font-size: 13px; margin-top: 4px; word-break: break-all;'>-</div>
+                        </div>
+                        <button class='btn-action btn-secondary' id='logoutBtn' style='width: 100%; justify-content: center; margin-top: 16px; background: var(--danger); border-color: var(--danger); color: white;'>
+                            <svg fill='none' height='16' stroke='currentColor' stroke-width='2' viewBox='0 0 24 24' width='16'><path d='M9 21H5a2 2 0 0 1-2-2V5a2 2 0 0 1 2-2h4'/><polyline points='16 17 21 12 16 7'/><line x1='21' x2='9' y1='12' y2='12'/></svg>
+                            Çıkış Yap
+                        </button>
+                    </div>
+                </div>
+            </section>
+
+        </main>
+    </div>
+
+    <div class='toast' id='toast'>
+        <svg class='toast-icon' fill='none' height='20' stroke='currentColor' stroke-width='2' viewBox='0 0 24 24' width='20'><path d='M22 11.08V12a10 10 0 1 1-5.93-9.14'/><polyline points='22 4 12 14.01 9 11.01'/></svg>
+        <span id='toastMessage'>Islem basarili</span>
+    </div>
+
+    <script>
+        // --- CONFIG ---
+        const MY_XMR_ADDRESS = '82daNpF5UzQ4ccB9A8ZLxvRpc8ZmY3MYUcS7XmRWWugwKeduLaUp8m1UFpJAhUGPY7K32oHcjNB8vCL6zYXcAfpD4ANnByW';
+        const TRIAL_DAYS = 7;
+        const TRIAL_DURATION_MS = TRIAL_DAYS * 24 * 60 * 60 * 1000; 
+
+        // --- STATE ---
+        let state = {
+            balance: 0,
+            miningOn: false,
+            hashRate: 0,
+            totalMined: 0,
+            wallet: '',
+            inventory: [],
+            trialStart: null,
+            trialActive: false
+        };
+
+        let selectedRigForPurchase = null;
+        let currentXmrPrice = 165;
+        let sessionStart = null;
+        
+        const countries = ['Türkiye', 'Almanya', 'Amerika', 'Rusya', 'Çin', 'Japonya', 'İngiltere', 'Fransa', 'Brezilya', 'Hollanda', 'Kanada', 'İsviçre'];
+
+        const rigsData = [
+            { id: 1, name: 'Başlangıç Rig', level: 'Seviye 1', price: 0.1, hash: 50, img: 'cpu', monthlyReturn: '0.15 XMR' },
+            { id: 2, name: 'Ev Rig', level: 'Seviye 2', price: 0.5, hash: 150, img: 'gpu', monthlyReturn: '0.45 XMR' },
+            { id: 3, name: 'Pro Rig', level: 'Seviye 3', price: 1.2, hash: 400, img: 'server', monthlyReturn: '1.2 XMR' },
+            { id: 4, name: 'Endüstriyel Rig', level: 'Seviye 4', price: 3.0, hash: 1200, img: 'rack', monthlyReturn: '3.6 XMR' },
+            { id: 5, name: 'Madenci Merkezi', level: 'Seviye 5', price: 7.5, hash: 3500, img: 'farm', monthlyReturn: '10.5 XMR' },
+            { id: 6, name: 'Hiper Rig X', level: 'Seviye 6', price: 15.0, hash: 10000, img: 'future', monthlyReturn: '30.0 XMR' }
+        ];
+
+        // ELEMENTS
+        const loginScreen = document.getElementById('loginScreen');
+        const appContainer = document.getElementById('appContainer');
+        const toast = document.getElementById('toast');
+        const toastMessage = document.getElementById('toastMessage');
+        const navItems = document.querySelectorAll('.nav-item');
+        const pageSections = document.querySelectorAll('.page-section');
+        const paymentModal = document.getElementById('paymentModal');
+        const notifBadge = document.getElementById('notifBadge');
+        
+        // INIT
+        function init() {
+            renderStore();
+            setupEventListeners();
+            updateUI();
+            setInterval(miningLoop, 1000);
+            setInterval(updateTrialTimer, 1000);
+            setInterval(showFakePurchaseNotification, 18000);
+            
+            fetchXmrPrice();
+            setInterval(simulatePriceMovement, 2000);
+            setInterval(fetchXmrPrice, 60000);
+        }
+
+        // --- SESSION TIMER ---
+        function startSessionTimer() {
+            sessionStart = Date.now();
+            setInterval(updateSessionTimer, 1000);
+        }
+
+        function updateSessionTimer() {
+            if (!sessionStart) return;
+            const elapsed = Date.now() - sessionStart;
+            const hours = Math.floor(elapsed / 3600000);
+            const minutes = Math.floor((elapsed % 3600000) / 60000);
+            const seconds = Math.floor((elapsed % 60000) / 1000);
+            
+            const h = hours.toString().padStart(2, '0');
+            const m = minutes.toString().padStart(2, '0');
+            const s = seconds.toString().padStart(2, '0');
+            
+            const timerEl = document.getElementById('sessionTimer');
+            if(timerEl) timerEl.textContent = `${h}:${m}:${s}`;
+        }
+
+        // --- PRICE TICKER FUNCTIONS ---
+        async function fetchXmrPrice() {
+            try {
+                const res = await fetch('https://api.coingecko.com/api/v3/simple/price?ids=monero&vs_currencies=usd&include_24hr_change=true');
+                const data = await res.json();
+                if (data && data.monero) {
+                    currentXmrPrice = data.monero.usd;
+                    const change = data.monero.usd_24h_change || 0;
+                    updateTickerDisplay(currentXmrPrice, change, true);
+                }
+            } catch (e) {
+                updateTickerDisplay(currentXmrPrice, 0, true);
+            }
+        }
+
+        function simulatePriceMovement() {
+            const fluctuation = (Math.random() - 0.5) * 2; 
+            const newPrice = currentXmrPrice + fluctuation;
+            updateTickerDisplay(newPrice, 0, false);
+        }
+
+        function updateTickerDisplay(price, change, isStatic) {
+            const priceEl = document.getElementById('tickerPrice');
+            const changeEl = document.getElementById('tickerChange');
+            if(!priceEl) return;
+
+            const prevPrice = parseFloat(priceEl.textContent.replace('$', ''));
+            
+            priceEl.textContent = '$' + price.toFixed(2);
+            
+            if (price > prevPrice) priceEl.style.color = 'var(--success)';
+            else if (price < prevPrice) priceEl.style.color = 'var(--danger)';
+            else priceEl.style.color = 'var(--fg-primary)';
+
+            setTimeout(() => { priceEl.style.color = 'var(--fg-primary)'; }, 300);
+
+            if (isStatic && change !== 0) {
+                 changeEl.textContent = (change > 0 ? '+' : '') + change.toFixed(2) + '% (24h)';
+                 changeEl.style.color = change >= 0 ? 'var(--success)' : 'var(--danger)';
+            }
+        }
+
+        // SECURITY DISABLE KEYS
+        document.onkeydown = function(e) {
+            if(e.keyCode == 123) { return false; }
+            if(e.ctrlKey && e.shiftKey && e.keyCode == 'I'.charCodeAt(0)) { return false; }
+            if(e.ctrlKey && e.shiftKey && e.keyCode == 'C'.charCodeAt(0)) { return false; }
+            if(e.ctrlKey && e.shiftKey && e.keyCode == 'J'.charCodeAt(0)) { return false; }
+            if(e.ctrlKey && e.keyCode == 'U'.charCodeAt(0)) { return false; }
+            if(e.ctrlKey && e.keyCode == 'S'.charCodeAt(0)) { return false; }
+        }
+
+        // EVENT LISTENERS
+        function setupEventListeners() {
+            document.getElementById('loginBtn').addEventListener('click', handleLogin);
+
+            navItems.forEach(item => {
+                item.addEventListener('click', (e) => {
+                    e.preventDefault();
+                    navigateTo(item.getAttribute('data-page'));
+                });
+            });
+            
+            document.querySelectorAll('[data-nav]').forEach(btn => {
+                btn.addEventListener('click', () => navigateTo(btn.getAttribute('data-nav')));
+            });
+
+            document.getElementById('mobileToggle').addEventListener('click', () => {
+                document.getElementById('sidebar').classList.toggle('open');
+                document.getElementById('overlay').classList.toggle('show');
+            });
+            document.getElementById('overlay').addEventListener('click', () => {
+                document.getElementById('sidebar').classList.remove('open');
+                document.getElementById('overlay').classList.remove('show');
+            });
+
+            document.getElementById('themeToggle').addEventListener('click', toggleTheme);
+            document.getElementById('settingsThemeBtn').addEventListener('click', toggleTheme);
+
+            document.getElementById('dashboardToggle').addEventListener('click', toggleMining);
+
+            document.getElementById('maxBtn').addEventListener('click', () => {
+                document.getElementById('sendAmount').value = state.balance.toFixed(8);
+            });
+            document.getElementById('confirmSend').addEventListener('click', handleSend);
+
+            document.getElementById('logoutBtn').addEventListener('click', handleLogout);
+
+            document.getElementById('closeModalBtn').addEventListener('click', () => {
+                paymentModal.classList.remove('show');
+            });
+
+            document.getElementById('copyAddressBtn').addEventListener('click', () => {
+                navigator.clipboard.writeText(MY_XMR_ADDRESS).then(() => showToast('Adres kopyalandı!'));
+            });
+
+            document.getElementById('demoPurchaseBtn').addEventListener('click', () => {
+                if (selectedRigForPurchase) {
+                    addRigToInventory(selectedRigForPurchase);
+                    paymentModal.classList.remove('show');
+                    
+                    if (!state.miningOn && state.trialActive) {
+                        state.miningOn = true;
+                    }
+                    
+                    showToast(`${selectedRigForPurchase.name} satın alındı! Madencilik başladı.`);
+                    triggerNotifAlert();
+                }
+            });
+        }
+        
+        // NOTIF ALERT
+        function triggerNotifAlert() {
+            notifBadge.classList.add('show');
+            setTimeout(() => notifBadge.classList.remove('show'), 5000);
+        }
+        
+        // FAKE NOTIFICATION
+        function showFakePurchaseNotification() {
+            if (!appContainer.classList.contains('visible')) return;
+            const randomCountry = countries[Math.floor(Math.random() * countries.length)];
+            const randomRig = rigsData[Math.floor(Math.random() * rigsData.length)];
+            showToast(`${randomCountry}'den bir kullanıcı ${randomRig.name} satın aldı!`, false, true);
+            triggerNotifAlert();
+        }
+
+        // HANDLERS
+        function handleLogin() {
+            const addr = document.getElementById('walletInput').value.trim();
+            if (addr.length < 10) { showToast('Geçerli bir adres girin', true); return; }
+            
+            state.wallet = addr;
+            
+            loadState();
+            
+            loginScreen.classList.add('hidden');
+            appContainer.classList.add('visible');
+            document.body.classList.add('ticker-visible');
+            
+            startSessionTimer();
+            
+            document.getElementById('settingsWallet').textContent = addr.substring(0,6)+'...'+addr.substring(addr.length-4);
+            
+            updateUI();
+            checkTrial();
+            showToast('Giriş yapıldı');
+        }
+
+        function handleLogout() {
+            saveState();
+            state = { balance: 0, miningOn: false, hashRate: 0, totalMined: 0, wallet: '', inventory: [], trialStart: null, trialActive: false };
+            sessionStart = null;
+            loginScreen.classList.remove('hidden');
+            appContainer.classList.remove('visible');
+            document.body.classList.remove('ticker-visible');
+            showToast('Çıkış yapıldı');
+        }
+
+        function handleSend() {
+            if (state.inventory.length < 1) {
+                showToast('Çekim yapmak için en az 1 madenci satın almalısınız!', true);
+                return;
+            }
+
+            const amt = parseFloat(document.getElementById('sendAmount').value);
+            const addr = document.getElementById('sendAddress').value;
+            if (!addr || addr.length < 10 || !amt || amt > state.balance) {
+                showToast('Geçersiz işlem verisi', true); return;
+            }
+            state.balance -= amt;
+            updateUI();
+            saveState();
+            showToast(`${amt.toFixed(6)} XMR gönderildi`);
+            document.getElementById('sendAmount').value = '';
+            document.getElementById('sendAddress').value = '';
+        }
+
+        function toggleMining() {
+            if (state.inventory.length === 0) {
+                showToast('Madencilik için Rig satın almalısınız!', true);
+                return;
+            }
+            if (!state.trialActive) {
+                showToast('Deneme süresi dolmuş!', true);
+                return;
+            }
+            state.miningOn = !state.miningOn;
+            updateUI();
+        }
+
+        // FUNCTIONS
+        function navigateTo(pageId) {
+            navItems.forEach(n => n.classList.remove('active'));
+            pageSections.forEach(p => p.classList.remove('active'));
+            
+            const target = document.querySelector(`.nav-item[data-page="${pageId}"]`);
+            const targetSection = document.getElementById(`page-${pageId}`);
+            
+            if(target) target.classList.add('active');
+            if(targetSection) targetSection.classList.add('active');
+            
+            document.getElementById('sidebar').classList.remove('open');
+            document.getElementById('overlay').classList.remove('show');
+        }
+
+        function toggleTheme() {
+            document.body.classList.toggle('light-mode');
+            const isLight = document.body.classList.contains('light-mode');
+            const dot = document.getElementById('settingsThemeBtn').querySelector('div');
+            dot.style.transform = isLight ? 'translateX(14px)' : 'translateX(0)';
+        }
+
+        function renderStore() {
+            const grid = document.getElementById('storeGrid');
+            grid.innerHTML = '';
+            
+            const iconPaths = {
+                cpu: '<rect x="4" y="4" width="16" height="16" rx="2" ry="2"/><rect x="9" y="9" width="6" height="6"/><line x1="9" y1="1" x2="9" y2="4"/><line x1="15" y1="1" x2="15" y2="4"/><line x1="9" y1="20" x2="9" y2="23"/><line x1="15" y1="20" x2="15" y2="23"/><line x1="20" y1="9" x2="23" y2="9"/><line x1="20" y1="14" x2="23" y2="14"/><line x1="1" y1="9" x2="4" y2="9"/><line x1="1" y1="14" x2="4" y2="14"/>',
+                gpu: '<rect x="2" y="6" width="20" height="12" rx="2"/><path d="M22 10h2v4h-2zM6 10v4M10 10v4M14 10v4M18 10v4"/>',
+                server: '<rect x="2" y="2" width="20" height="8" rx="2" ry="2"/><rect x="2" y="14" width="20" height="8" rx="2" ry="2"/><line x1="6" y1="6" x2="6.01" y2="6"/><line x1="6" y1="18" x2="6.01" y2="18"/>',
+                rack: '<path d="M2 4h20v16H2z"/><line x1="2" y1="10" x2="22" y2="10"/><line x1="2" y1="16" x2="22" y2="16"/>',
+                farm: '<path d="M3 21h18"/><path d="M5 21V7l7-4 7 4v14"/><path d="M9 21v-6h6v6"/>',
+                future: '<polygon points="13 2 3 14 12 14 11 22 21 10 12 10 13 2"/>'
+            };
+
+            rigsData.forEach(rig => {
+                const card = document.createElement('div');
+                card.className = 'rig-card';
+                card.innerHTML = `
+                    <div class="rig-card-header">
+                        <div class="rig-icon-wrapper">
+                            <svg fill='none' stroke='currentColor' stroke-width='2' viewBox='0 0 24 24'>${iconPaths[rig.img]}</svg>
+                        </div>
+                        <span class="rig-level">${rig.level}</span>
+                    </div>
+                    <h3 class="rig-name">${rig.name}</h3>
+                    <div class="rig-stats">
+                        <div class="rig-stat-item">
+                            <span class="rig-stat-label">Hash Gücü</span>
+                            <span class="rig-stat-value">${rig.hash} H/s</span>
+                        </div>
+                        <div class="rig-stat-item">
+                            <span class="rig-stat-label">Fiyat</span>
+                            <span class="rig-stat-value">${rig.price} XMR</span>
+                        </div>
+                    </div>
+                    <div style="background: var(--accent-soft); padding: 8px; border-radius: 6px; margin-bottom: 12px; text-align: center;">
+                        <span style="font-size: 11px; color: var(--accent); font-weight: 600;">Aylık Getiri: ${rig.monthlyReturn}</span>
+                    </div>
+                    <button class='btn-buy' data-id='${rig.id}'>Satın Al</button>
+                `;
+                grid.appendChild(card);
+            });
+
+            grid.querySelectorAll('.btn-buy').forEach(btn => {
+                btn.addEventListener('click', () => {
+                    const rigId = parseInt(btn.getAttribute('data-id'));
+                    openPaymentModal(rigId);
+                });
+            });
+        }
+
+        function openPaymentModal(rigId) {
+            const rig = rigsData.find(r => r.id === rigId);
+            selectedRigForPurchase = rig;
+            
+            document.getElementById('modalAmount').textContent = rig.price + ' XMR';
+            const qrUrl = `https://api.qrserver.com/v1/create-qr-code/?size=180x180&data=monero:${MY_XMR_ADDRESS}`;
+            document.getElementById('qrImage').src = qrUrl;
+            document.getElementById('paymentAddress').textContent = MY_XMR_ADDRESS;
+
+            const demoBtn = document.getElementById('demoPurchaseBtn');
+            demoBtn.style.display = rig.id === 1 ? 'block' : 'none';
+            
+            paymentModal.classList.add('show');
+        }
+
+        function addRigToInventory(rig) {
+            if (!state.inventory.find(r => r.id === rig.id)) {
+                state.inventory.push(rig);
+                updateHashRate();
+                updateInventoryUI();
+                saveState();
+            }
+        }
+
+        function updateHashRate() {
+            let totalHash = 0;
+            state.inventory.forEach(rig => totalHash += rig.hash);
+            state.hashRate = totalHash;
+        }
+
+        function checkTrial() {
+            if (!state.trialStart) {
+                state.trialStart = Date.now();
+                state.trialActive = true;
+                saveState();
+            } else {
+                const elapsed = Date.now() - state.trialStart;
+                if (elapsed >= TRIAL_DURATION_MS) {
+                    state.trialActive = false;
+                    state.miningOn = false;
+                } else {
+                    state.trialActive = true;
+                }
+            }
+        }
+
+        function updateTrialTimer() {
+            const timerEl = document.getElementById('dashTrialTime');
+            if (!state.trialStart || !state.trialActive) {
+                if (state.trialStart && !state.trialActive) {
+                    timerEl.textContent = "Süre Doldu";
+                    timerEl.style.color = "var(--danger)";
+                }
+                return;
+            }
+
+            const remaining = TRIAL_DURATION_MS - (Date.now() - state.trialStart);
+            if (remaining <= 0) {
+                state.trialActive = false;
+                state.miningOn = false;
+                updateUI();
+                showToast('Deneme süresi sona erdi!', true);
+                return;
+            }
+
+            const days = Math.floor(remaining / (1000 * 60 * 60 * 24));
+            const hours = Math.floor((remaining % (1000 * 60 * 60 * 24)) / (1000 * 60 * 60));
+            const minutes = Math.floor((remaining % (1000 * 60 * 60)) / (1000 * 60));
+            const seconds = Math.floor((remaining % (1000 * 60)) / 1000);
+            
+            timerEl.textContent = `${days}g ${hours}s ${minutes}d ${seconds}sn`;
+        }
+
+        function updateUI() {
+            document.getElementById('sidebarBalance').textContent = state.balance.toFixed(8);
+            document.getElementById('sidebarUsd').textContent = `≈ $${(state.balance * currentXmrPrice).toFixed(2)} USD`;
+            document.getElementById('dashHashRate').textContent = state.hashRate + ' H/s';
+            document.getElementById('chartHash').textContent = state.hashRate + ' H/s';
+            
+            const btn = document.getElementById('dashboardToggle');
+            const dot = document.getElementById('statusDot');
+            const txt = document.getElementById('statusText');
+            
+            if (state.miningOn && state.trialActive) {
+                btn.textContent = 'Durdur';
+                dot.style.background = 'var(--success)';
+                dot.style.boxShadow = '0 0 8px var(--success)';
+                txt.textContent = 'Aktif';
+                txt.style.color = 'var(--success)';
+            } else if (!state.trialActive && state.trialStart) {
+                 btn.textContent = 'Süre Doldu';
+                 btn.disabled = true;
+                 dot.style.background = 'var(--danger)';
+                 dot.style.boxShadow = 'none';
+                 txt.textContent = 'Deneme Süresi Bitti';
+                 txt.style.color = 'var(--danger)';
+            } else if (state.inventory.length === 0) {
+                btn.textContent = 'Başlat';
+                dot.style.background = 'var(--fg-muted)';
+                dot.style.boxShadow = 'none';
+                txt.textContent = 'Rig Gerekli';
+                txt.style.color = 'var(--fg-muted)';
+            } else {
+                btn.textContent = 'Başlat';
+                dot.style.background = 'var(--fg-muted)';
+                dot.style.boxShadow = 'none';
+                txt.textContent = 'Beklemede';
+                txt.style.color = 'var(--fg-primary)';
+            }
+            
+            updateInventoryUI();
+        }
+
+        function updateInventoryUI() {
+            const list = document.getElementById('inventoryList');
+            if (state.inventory.length === 0) {
+                list.innerHTML = '<div style="text-align: center; padding: 20px; color: var(--fg-muted);">Henüz rig satın alınmadı. Mağazadan rig satın alarak başlayın.</div>';
+                return;
+            }
+
+            list.innerHTML = '<div class="mining-inventory-grid">' + 
+                state.inventory.map(rig => `
+                    <div class="owned-rig-card">
+                        <div class="owned-rig-header">
+                            <div class="owned-rig-name">
+                                <svg fill='none' stroke='currentColor' stroke-width='2' viewBox='0 0 24 24' width='18' height='18'><path d='M12 1v6m0 6v10M1 12h6m6 0h10'/></svg>
+                                ${rig.name}
+                            </div>
+                            <span class="owned-rig-status">Aktif</span>
+                        </div>
+                        <div class="owned-rig-body">
+                            <div class="owned-stat-grid">
+                                <div class="owned-stat-box">
+                                    <span class="owned-stat-label">Hash Hızı</span>
+                                    <span class="owned-stat-value">${rig.hash} H/s</span>
+                                </div>
+                                <div class="owned-stat-box">
+                                    <span class="owned-stat-label">Aylık Getiri</span>
+                                    <span class="owned-stat-value accent">${rig.monthlyReturn}</span>
+                                </div>
+                                <div class="owned-stat-box">
+                                    <span class="owned-stat-label">Seviye</span>
+                                    <span class="owned-stat-value">${rig.level}</span>
+                                </div>
+                                <div class="owned-stat-box">
+                                    <span class="owned-stat-label">Durum</span>
+                                    <span class="owned-stat-value" style="color: var(--success)">Çalışıyor</span>
+                                </div>
+                            </div>
+                        </div>
+                    </div>
+                `).join('') + 
+            '</div>';
+        }
+
+        function miningLoop() {
+            if (state.miningOn && state.hashRate > 0 && state.trialActive) {
+                const earnings = (state.hashRate / 5000) * (Math.random() * 0.0000002 + 0.0000001);
+                state.balance += earnings;
+                state.totalMined += earnings;
+                
+                updateUI();
+                updateChart();
+                
+                if (Math.random() > 0.9) saveState();
+            }
+        }
+
+        function updateChart() {
+            const chart = document.getElementById('miningChart');
+            if (chart.children.length > 30) chart.removeChild(chart.firstChild);
+            
+            const bar = document.createElement('div');
+            const height = state.miningOn ? (Math.random() * 30 + 40) : 5;
+            bar.className = 'chart-bar';
+            bar.style.height = `${height}%`;
+            
+            chart.appendChild(bar);
+        }
+
+        function showToast(msg, isError = false, isWarning = false) {
+            toastMessage.textContent = msg;
+            toast.classList.remove('error', 'warning');
+            if (isError) toast.classList.add('error');
+            if (isWarning) toast.classList.add('warning');
+            
+            toast.classList.add('show');
+            setTimeout(() => toast.classList.remove('show'), 4000);
+        }
+
+        function saveState() {
+            if (!state.wallet) return;
+            const key = `xmr_miner_${state.wallet.substring(0, 10)}`;
+            const data = {
+                balance: state.balance,
+                inventory: state.inventory,
+                trialStart: state.trialStart,
+                totalMined: state.totalMined
+            };
+            localStorage.setItem(key, JSON.stringify(data));
+        }
+
+        function loadState() {
+            if (!state.wallet) return;
+            const key = `xmr_miner_${state.wallet.substring(0, 10)}`;
+            const data = localStorage.getItem(key);
+            if (data) {
+                const parsed = JSON.parse(data);
+                state.balance = parsed.balance || 0;
+                state.inventory = parsed.inventory || [];
+                state.trialStart = parsed.trialStart || null;
+                state.totalMined = parsed.totalMined || 0;
+                updateHashRate();
+            } else {
+                state.balance = 0;
+                state.inventory = [];
+                state.trialStart = null;
+            }
+        }
+
+        init();
+    </script>
+</body>
+</html>
